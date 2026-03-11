@@ -7,7 +7,10 @@ const DriverDashboard = ({ onSignOut }) => {
     const [routes, setRoutes] = useState([]);
     const [gpsStatus, setGpsStatus] = useState('Off'); // 'Off', 'Searching', 'Live', 'Simulated'
     const [lastPosition, setLastPosition] = useState(null);
+    const [watchId, setWatchId] = useState(null);
+    const [loading, setLoading] = useState(false);
     const startTimeoutRef = useRef(null);
+    const channelRef = useRef(null);
 
     useEffect(() => {
         fetchRoutes();

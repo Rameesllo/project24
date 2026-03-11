@@ -73,7 +73,14 @@ function App() {
       }
     } else {
       const persistedRole = localStorage.getItem('nextstop_role');
-      setCurrentView('role-selection');
+      if (persistedRole) {
+        setUserRole(persistedRole);
+        if (persistedRole === 'driver') setCurrentView('driver-dashboard');
+        else if (persistedRole === 'admin') setCurrentView('admin-dashboard');
+        else setCurrentView('student-dashboard');
+      } else {
+        setCurrentView('role-selection');
+      }
     }
   };
 
