@@ -29,7 +29,7 @@ function App() {
   useEffect(() => {
     // Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (window.location.hash.includes('type=recovery')) {
+      if (window.location.href.includes('type=recovery')) {
         window.isPasswordRecovery = true;
         setCurrentView('update-password');
       } else {

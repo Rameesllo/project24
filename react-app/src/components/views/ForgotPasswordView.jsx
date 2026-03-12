@@ -16,8 +16,9 @@ const ForgotPasswordView = ({ onBack }) => {
         try {
             const emailAlias = email.includes('@') ? email : `${email}@nextstop.com`;
 
+            const redirectUrl = `${window.location.protocol}//${window.location.host}`;
             const { error } = await supabase.auth.resetPasswordForEmail(emailAlias, {
-                redirectTo: window.location.origin,
+                redirectTo: redirectUrl,
             });
 
             if (error) {
