@@ -69,9 +69,12 @@ const PaymentView = () => {
     const yearTabs = getYearTabs();
 
     const renderMonth = (i) => {
-        const monthlyFee = 250;
+        // Calculate dynamic monthly fee based on total_due (assuming 10 installments)
+        const totalDue = feeData?.total_due || 2500;
+        const monthlyFee = Math.ceil(totalDue / 10);
+        
         const monthsPerYear = 10;
-        const yearCost = monthlyFee * monthsPerYear;
+        const yearCost = totalDue;
         let remainingPaid = Math.max(0, amountPaid - (selectedYearOffset * yearCost));
 
         let startYear = 2024;
@@ -95,7 +98,7 @@ const PaymentView = () => {
         let iconColor = 'var(--color-error)';
         let payButton = false;
 
-        // Logic from app.js
+        // Logic for installments
         const previousMonthsPaid = i * monthlyFee;
         const currentRemaining = remainingPaid - previousMonthsPaid;
 
@@ -176,7 +179,7 @@ const PaymentView = () => {
 
                     <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span id="pay-next-due" style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Dues: ₹{Math.max(0, 2500 - amountPaid)}</span>
+                            <span id="pay-next-due" style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Dues: ₹{Math.max(0, (feeData?.total_due || 2500) - amountPaid)}</span>
                             <i className="ph ph-info" style={{ opacity: 0.6 }}></i>
                         </div>
                     </div>

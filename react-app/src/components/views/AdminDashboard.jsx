@@ -19,7 +19,7 @@ const AdminDashboard = ({ onSignOut }) => {
         setLoading(true);
         try {
             const { data: rd } = await supabase.from('routes').select('*').order('name');
-            const { data: sd } = await supabase.from('profiles').select('*, routes!route_id(name, bus_number)').eq('role', 'student').order('full_name');
+            const { data: sd } = await supabase.from('profiles').select('*, routes!route_id(name, bus_number), fee_payments(total_due)').eq('role', 'student').order('full_name');
             const { data: nd } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(10);
             const { data: fd } = await supabase.from('fee_payments').select('*, profiles(full_name, admission_number, course, academic_year)').order('id');
             const { data: hd } = await supabase.from('payment_history').select('*, profiles(full_name, admission_number, course, academic_year)').order('date', { ascending: false });
@@ -240,6 +240,9 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
                             <td className="student-cell">
                                 <h4>{s.full_name}</h4>
                                 <p>{s.email} • {s.course} • {s.admission_number} • ({s.academic_year || '2023-26'})</p>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-teal)', marginTop: '4px' }}>
+                                    Total Fee: ₹{s.fee_payments?.[0]?.total_due || 0}
+                                </div>
                             </td>
                             <td>
                                 <div className="route-cell-meta">
@@ -402,7 +405,10 @@ const COURSES = [
 ];
 
 const StudentForm = ({ student, routes, onSave, onClose }) => {
-    const [f, setF] = useState(student ? { ...student } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', total_due: 2500, academic_year: '', avatar_url: '' });
+    const [f, setF] = useState(student ? { 
+        ...student, 
+        total_due: student.fee_payments?.[0]?.total_due || 2500 
+    } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', total_due: 2500, academic_year: '', avatar_url: '' });
     const [sub, setSub] = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -447,6 +453,8 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                     avatar_url: f.avatar_url
                 };
                 await supabase.from('profiles').update(payload).eq('id', student.id);
+                // Also update fee_payments table
+                await supabase.from('fee_payments').update({ total_due: Number(f.total_due) }).eq('student_id', student.id);
             } else {
                 const { data: auth, error: authErr } = await supabaseAdmin.auth.admin.createUser({ email: f.email, password: f.password, user_metadata: { role: 'student' }, email_confirm: true });
                 if (authErr) throw authErr;

@@ -14,6 +14,9 @@ export default defineConfig({
         short_name: 'NextStop',
         description: 'Real-time college bus tracking and fee management system.',
         theme_color: '#14b8a6',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import usePWA from '../../hooks/usePWA';
 
 const RoleSelectionView = ({ onSelectRole }) => {
     const [clickCount, setClickCount] = useState(0);
+    const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+    const { isInstallable, isIOS, isSafari, installApp } = usePWA();
 
     const handleSecretClick = () => {
         const next = clickCount + 1;
@@ -27,7 +30,50 @@ const RoleSelectionView = ({ onSelectRole }) => {
                     </div>
                     <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, marginTop: '8px', textAlign: 'center' }}>Welcome to Next Stop</h1>
                     <p style={{ fontWeight: 600 }}>Select your role to continue</p>
+                    
+                    {isInstallable && (
+                        <button className="install-btn-v4 animate-fade-in" onClick={installApp}>
+                            <i className="ph-fill ph-download-simple"></i>
+                            Install App
+                        </button>
+                    )}
+
+                    {isIOS && (
+                        <button className="install-btn-v4 ios animate-fade-in" onClick={() => setShowIOSInstructions(true)}>
+                            <i className="ph-fill ph-apple-logo"></i>
+                            {isSafari ? 'Install on iPhone' : 'Open in Safari to Install'}
+                        </button>
+                    )}
                 </div>
+
+                {showIOSInstructions && (
+                    <div className="ios-modal-overlay" onClick={() => setShowIOSInstructions(false)}>
+                        <div className="ios-modal-v4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+                            <div className="ios-modal-header">
+                                <i className="ph-fill ph-apple-logo"></i>
+                                <h3>Install NextStop</h3>
+                                <button className="close-btn" onClick={() => setShowIOSInstructions(false)}>
+                                    <i className="ph ph-x"></i>
+                                </button>
+                            </div>
+                            <div className="ios-instructions">
+                                <div className="step">
+                                    <div className="step-num">1</div>
+                                    <p>Tap the <strong>Share</strong> button <i className="ph ph-export"></i> in Safari's bottom bar.</p>
+                                </div>
+                                <div className="step">
+                                    <div className="step-num">2</div>
+                                    <p>Scroll down and tap <strong>Add to Home Screen</strong> <i className="ph ph-plus-square"></i>.</p>
+                                </div>
+                                <div className="step">
+                                    <div className="step-num">3</div>
+                                    <p>Tap <strong>Add</strong> in the top-right corner to finish.</p>
+                                </div>
+                            </div>
+                            <button className="ios-got-it" onClick={() => setShowIOSInstructions(false)}>Got it!</button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="role-stack-v4">
                     {/* Student Card */}
@@ -83,6 +129,122 @@ const RoleSelectionView = ({ onSelectRole }) => {
                 .admin-subtle-link:hover {
                     color: #94a3b8;
                     text-decoration: underline;
+                }
+                .install-btn-v4 {
+                    margin-top: 16px;
+                    padding: 12px 24px;
+                    background: #14b8a6;
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 0.95rem;
+                    font-weight: 800;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 15px rgba(20, 184, 166, 0.2);
+                    transition: all 0.3s ease;
+                }
+                .install-btn-v4:active {
+                    transform: scale(0.95);
+                }
+                .install-btn-v4.ios {
+                    background: #000;
+                }
+                .ios-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.6);
+                    backdrop-filter: blur(5px);
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 24px;
+                }
+                .ios-modal-v4 {
+                    background: white;
+                    width: 100%;
+                    max-width: 320px;
+                    border-radius: 32px;
+                    padding: 32px 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+                }
+                .ios-modal-header {
+                    text-align: center;
+                    position: relative;
+                }
+                .ios-modal-header i {
+                    font-size: 2.5rem;
+                    color: #000;
+                }
+                .ios-modal-header h3 {
+                    margin: 12px 0 0 0;
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                }
+                .ios-modal-header .close-btn {
+                    position: absolute;
+                    top: -10px;
+                    right: -10px;
+                    background: #f1f5f9;
+                    border: none;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                }
+                .ios-instructions {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+                .step {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 16px;
+                }
+                .step-num {
+                    width: 28px;
+                    height: 28px;
+                    background: #f1f5f9;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 800;
+                    font-size: 0.9rem;
+                    flex-shrink: 0;
+                }
+                .step p {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    font-weight: 500;
+                    line-height: 1.4;
+                    color: #334155;
+                }
+                .step i {
+                    color: #14b8a6;
+                    font-size: 1.1rem;
+                    vertical-align: middle;
+                }
+                .ios-got-it {
+                    background: #14b8a6;
+                    color: white;
+                    border: none;
+                    padding: 14px;
+                    border-radius: 16px;
+                    font-weight: 800;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
                 }
                 .brand-pin-v4 {
                     width: 50px;
