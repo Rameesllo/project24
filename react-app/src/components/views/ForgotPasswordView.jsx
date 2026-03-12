@@ -18,7 +18,12 @@ const ForgotPasswordView = ({ onBack }) => {
 
             // Use origin for reliability
             const origin = window.location.origin;
-            console.log('Reset password redirecting to:', origin);
+            console.log('Reset password request for:', emailAlias);
+            console.log('Redirecting to origin:', origin);
+
+            if (origin.includes('localhost')) {
+                console.warn("⚠️ Warning: Requesting reset from 'localhost'. This link will NOT work on mobile devices.");
+            }
 
             const { error } = await supabase.auth.resetPasswordForEmail(emailAlias, {
                 redirectTo: origin,

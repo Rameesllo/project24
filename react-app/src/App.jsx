@@ -27,12 +27,16 @@ function App() {
   const [selectedRouteData, setSelectedRouteData] = useState(null);
 
   useEffect(() => {
-    // Robust detection of recovery flow from URL (checks both fragment and query)
-    const isRecovery = window.location.href.includes('type=recovery') || 
-                       window.location.hash.includes('type=recovery');
+    // Robust detection of recovery flow from URL
+    const url = new URL(window.location.href);
+    const hasRecoveryQuery = url.searchParams.get('type') === 'recovery';
+    const hasRecoveryHash = window.location.hash.includes('type=recovery');
+    const hasAccessToken = window.location.hash.includes('access_token=');
     
-    if (isRecovery) {
-      console.log("Detection: Password Recovery URL found.");
+    console.log("URL Detection Check:", { hasRecoveryQuery, hasRecoveryHash, hasAccessToken });
+
+    if (hasRecoveryQuery || (hasRecoveryHash && hasAccessToken)) {
+      console.log("✅ Detection: Password Recovery flow identified.");
       window.isPasswordRecovery = true;
       setCurrentView('update-password');
     }
