@@ -29,7 +29,12 @@ function App() {
   useEffect(() => {
     // Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuthChange(session);
+      if (window.location.hash.includes('type=recovery')) {
+        window.isPasswordRecovery = true;
+        setCurrentView('update-password');
+      } else {
+        handleAuthChange(session);
+      }
     });
 
     // Auth Listener
