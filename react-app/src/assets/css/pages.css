@@ -921,7 +921,7 @@
     justify-content: center;
     overflow: hidden;
     border: 2px solid rgba(168, 207, 198, 0.2);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .illustration-box img {
