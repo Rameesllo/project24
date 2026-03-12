@@ -1444,3 +1444,118 @@
     margin-left: 12px;
     font-weight: 500;
 }
+
+/* --- Notifications Redesign --- */
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-1);
+}
+
+.notification-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 24px;
+    padding: var(--space-4);
+    display: flex;
+    gap: var(--space-4);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.03),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+    max-height: 84px; /* Truncated height */
+}
+
+.notification-card.expanded {
+    max-height: 400px; /* Expanded height */
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    border-color: var(--color-teal);
+}
+
+.notif-message {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+    font-weight: 500;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: -webkit-line-clamp 0.4s ease;
+}
+
+.notification-card.expanded .notif-message {
+    -webkit-line-clamp: unset;
+}
+
+.notif-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: var(--gradient-teal);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+    flex-shrink: 0;
+}
+
+.notif-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notif-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notif-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--color-deep-teal);
+    margin: 0;
+}
+
+.notif-time {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-gray-400);
+}
+
+.notif-message {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+    font-weight: 500;
+    margin: 0;
+}
+
+.messenger-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) var(--space-6);
+    color: var(--color-gray-400);
+    text-align: center;
+}
+
+.messenger-empty p {
+    margin-top: var(--space-4);
+    font-weight: 500;
+    font-size: 1.1rem;
+}

@@ -5,6 +5,7 @@ import { Bell, WarningOctagon, Bus, Clock, CreditCard, CalendarX, ArrowLeft, Cha
 const NotificationsView = ({ onBack, currentRouteId }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [expandedIndex, setExpandedIndex] = useState(null);
 
     useEffect(() => {
         fetchNotifications();
@@ -61,7 +62,7 @@ const NotificationsView = ({ onBack, currentRouteId }) => {
             </header>
 
             <div className="page-content">
-                <div className="messenger-list" id="student-notifications-list">
+                <div className="notifications-list" id="student-notifications-list">
                     {notifications.length === 0 && !loading ? (
                         <div className="messenger-empty">
                             <ChatCenteredText size={64} weight="thin" />
@@ -71,17 +72,24 @@ const NotificationsView = ({ onBack, currentRouteId }) => {
                         notifications.map((n, i) => {
                             const Icon = getIcon(n.title, n.message);
                             const date = new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            const isExpanded = expandedIndex === i;
+
                             return (
-                                <div key={i} className="msg-item">
-                                    <div className="msg-avatar">
-                                        <Icon weight="fill" size={24} />
+                                <div 
+                                    key={i} 
+                                    className={`notification-card animate-slide-up ${isExpanded ? 'expanded' : ''}`} 
+                                    style={{ animationDelay: `${i * 0.05}s` }}
+                                    onClick={() => setExpandedIndex(isExpanded ? null : i)}
+                                >
+                                    <div className="notif-icon-wrapper">
+                                        <Icon weight="duotone" size={24} />
                                     </div>
-                                    <div className="msg-content">
-                                        <div className="msg-bubble" style={{ borderRadius: '20px 20px 20px 4px' }}>
-                                            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: '0 0 4px 0' }}>{n.title}</h4>
-                                            <p style={{ margin: 0, fontSize: '0.9rem' }}>{n.message}</p>
+                                    <div className="notif-body">
+                                        <div className="notif-header">
+                                            <h4 className="notif-title">{n.title}</h4>
+                                            <span className="notif-time">{date}</span>
                                         </div>
-                                        <span className="msg-time">{date}</span>
+                                        <p className="notif-message">{n.message}</p>
                                     </div>
                                 </div>
                             );

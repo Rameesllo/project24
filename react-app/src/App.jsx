@@ -27,23 +27,33 @@ function App() {
   const [selectedRouteData, setSelectedRouteData] = useState(null);
 
   useEffect(() => {
+    // Robust detection of recovery flow from URL (checks both fragment and query)
+    const isRecovery = window.location.href.includes('type=recovery') || 
+                       window.location.hash.includes('type=recovery');
+    
+    if (isRecovery) {
+      console.log("Detection: Password Recovery URL found.");
+      window.isPasswordRecovery = true;
+      setCurrentView('update-password');
+    }
+
     // Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (window.location.href.includes('type=recovery')) {
-        window.isPasswordRecovery = true;
-        setCurrentView('update-password');
-      } else {
+      if (!window.isPasswordRecovery) {
         handleAuthChange(session);
       }
     });
 
     // Auth Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth Event:", event);
+      
       if (event === 'PASSWORD_RECOVERY') {
-        window.isPasswordRecovery = true; // Use a window flag to lock the view
+        window.isPasswordRecovery = true;
         setCurrentView('update-password');
       } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         if (window.isPasswordRecovery) {
+          // Stay on update page if we're recovering
           setCurrentView('update-password');
         } else {
           handleAuthChange(session);
