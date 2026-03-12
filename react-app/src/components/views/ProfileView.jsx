@@ -65,7 +65,15 @@ const ProfileView = ({ onSignOut }) => {
                             </div>
 
                             <div className="vid-qr">
-                                <i className="ph-fill ph-qr-code"></i>
+                                {profile?.admissionNumber ? (
+                                    <img 
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(profile.admissionNumber)}`} 
+                                        alt="Scanner QR" 
+                                        style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'contain' }}
+                                    />
+                                ) : (
+                                    <i className="ph-fill ph-qr-code"></i>
+                                )}
                             </div>
                         </div>
 

@@ -881,8 +881,13 @@ async function loadProfileData() {
     }
   }
 
-  // The Live QR Code feature was reverted. The container is now just a static icon.
+  // Live QR Code Generation
+  const qrContainer = document.querySelector('.vid-qr');
+  if (qrContainer && metadataAdmission) {
+    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(metadataAdmission)}" alt="QR Code" style="width: 100%; height: 100%; border-radius: 8px; object-fit: contain;">`;
+  }
 }
+
 
 async function loadStudentPaymentData() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();

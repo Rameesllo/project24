@@ -912,22 +912,23 @@
 }
 
 .illustration-box {
-    width: 64px;
-    height: 64px;
-    background-color: #e6f7f5;
-    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    background-color: transparent;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     border: 2px solid rgba(168, 207, 198, 0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .illustration-box img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    border-radius: 14px;
 }
 
 .route-meta {
