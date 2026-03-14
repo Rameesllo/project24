@@ -164,39 +164,61 @@ const PaymentView = () => {
             </header>
 
             <div className="page-content">
-                <div className="payment-summary-premium">
+                {(() => {
+                    const isCurrentYearPaid = amountPaid >= (selectedYearOffset + 1) * (feeData?.total_due || 2500);
+                    return (
+                        <div className="payment-summary-premium">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <p style={{ margin: 0, fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>Total Collected</p>
+                            <p style={{ margin: 0, fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>Overall Collected</p>
                             <h2 id="pay-total-paid" style={{ margin: '4px 0 0 0', fontSize: '2rem', fontWeight: 800, letterSpacing: '-1px', fontFamily: 'var(--font-display)' }}>
-                                ₹{amountPaid}
+                                ₹{amountPaid.toLocaleString()}
                             </h2>
                         </div>
-                        <div id="pay-progress-badge" style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                            {loading ? 'Loading' : (amountPaid > 0 ? 'Active' : 'No Data')}
+                        <div id="pay-progress-badge" style={{ background: isCurrentYearPaid ? 'rgba(52, 211, 153, 0.2)' : 'rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', border: isCurrentYearPaid ? '1px solid rgba(52, 211, 153, 0.3)' : 'none' }}>
+                            {loading ? 'Loading' : (isCurrentYearPaid ? 'Fully Paid' : 'Pending')}
                         </div>
                     </div>
 
                     <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span id="pay-next-due" style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Dues: ₹{Math.max(0, (feeData?.total_due || 2500) - amountPaid)}</span>
-                            <i className="ph ph-info" style={{ opacity: 0.6 }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.9rem', opacity: 0.8, fontWeight: 500 }}>Annual Fee ({yearTabs[selectedYearOffset]?.label}):</span>
+                                <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>₹{(feeData?.total_due || 2500).toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span id="pay-next-due" style={{ fontSize: '1rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+                                    Total Dues (Up to Year): ₹{Math.max(0, ((selectedYearOffset + 1) * (feeData?.total_due || 2500)) - amountPaid).toLocaleString()}
+                                </span>
+                                <i className="ph ph-info" style={{ opacity: 0.6 }}></i>
+                            </div>
                         </div>
                     </div>
                 </div>
+            );
+        })()}
 
                 <div className="p-4">
                     <h4 className="section-title" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Academic Year</h4>
                     <div className="year-tabs" id="payment-year-tabs">
-                        {yearTabs.map(tab => (
-                            <div
-                                key={tab.offset}
-                                className={`year-tab ${selectedYearOffset === tab.offset ? 'active' : ''}`}
-                                onClick={() => setSelectedYearOffset(tab.offset)}
-                            >
-                                {tab.label}
-                            </div>
-                        ))}
+                        {yearTabs.map(tab => {
+                            const isYearPaid = amountPaid >= (tab.offset + 1) * (feeData?.total_due || 2500);
+                            return (
+                                <div
+                                    key={tab.offset}
+                                    className={`year-tab ${selectedYearOffset === tab.offset ? 'active' : ''}`}
+                                    onClick={() => setSelectedYearOffset(tab.offset)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    {isYearPaid ? (
+                                        <i className="ph-fill ph-check-circle" style={{ color: '#10b981', fontSize: '1rem' }}></i>
+                                    ) : (
+                                        <i className="ph-fill ph-clock" style={{ opacity: 0.5, fontSize: '1rem' }}></i>
+                                    )}
+                                    {tab.label}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="section-container mt-4">

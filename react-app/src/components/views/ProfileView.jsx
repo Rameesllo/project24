@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 const ProfileView = ({ onSignOut }) => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isQRZoomed, setIsQRZoomed] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -29,6 +30,7 @@ const ProfileView = ({ onSignOut }) => {
                     registerNumber: profileData?.register_number || 'REG2024089',
                     course: profileData?.course || 'Bachelor of Science (CS)',
                     academicYear: profileData?.academic_year || '2024-2027',
+                    boardingStop: profileData?.boarding_stop || 'N/A' // Added boardingStop to profile state
                 });
             }
         } catch (err) {
@@ -64,7 +66,7 @@ const ProfileView = ({ onSignOut }) => {
                                 </div>
                             </div>
 
-                            <div className="vid-qr">
+                            <div className="vid-qr" onClick={() => setIsQRZoomed(true)} style={{ cursor: 'zoom-in' }}>
                                 {profile?.admissionNumber ? (
                                     <img 
                                         src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(profile.admissionNumber)}`} 
@@ -92,7 +94,7 @@ const ProfileView = ({ onSignOut }) => {
                             </div>
                             <div className="vid-detail-item">
                                 <label style={{ fontFamily: 'var(--font-family)', fontWeight: 700, fontSize: '0.7rem' }}>Route & Boarding</label>
-                                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>{profile?.routeName}</span>
+                                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>{profile?.routeName} • {profile?.boardingStop}</span>
                             </div>
                             <div className="vid-detail-item">
                                 <label style={{ fontFamily: 'var(--font-family)', fontWeight: 700, fontSize: '0.7rem' }}>Bus Details</label>
@@ -151,6 +153,38 @@ const ProfileView = ({ onSignOut }) => {
                     </div>
                 </div>
             </div>
+
+            {/* QR Zoom Overlay */}
+            {isQRZoomed && profile?.admissionNumber && (
+                <div className="qr-zoom-overlay" onClick={() => setIsQRZoomed(false)}>
+                    <div className="qr-zoom-card" onClick={e => e.stopPropagation()}>
+                        <div className="qr-zoom-header">
+                            <div className="qr-brand-badge">
+                                <i className="ph ph-qr-code"></i>
+                            </div>
+                            <div className="qr-zoom-info" style={{ textAlign: 'center' }}>
+                                <h3>{profile.fullName}</h3>
+                                <p>Student ID: {profile.admissionNumber}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="qr-zoom-scanner-container">
+                            <div className="qr-scanner-line"></div>
+                            <div className="qr-scanner-frame"></div>
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(profile.admissionNumber)}`} 
+                                alt="Large QR" 
+                                className="qr-zoom-image"
+                            />
+                        </div>
+
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
+                            Scan to verify identity and route access
+                        </div>
+                    </div>
+                    <div className="qr-zoom-close" onClick={() => setIsQRZoomed(false)}>Tap background to close</div>
+                </div>
+            )}
 
             {/* Custom styles moved to pages.css but adding overrides here for perfect parity */}
             <style dangerouslySetInnerHTML={{

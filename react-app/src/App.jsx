@@ -25,6 +25,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [selectedRouteData, setSelectedRouteData] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     // Robust detection of recovery flow from URL
@@ -68,8 +69,33 @@ function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Global Notification Listener for Automated Stop Alerts
+    const notifChannel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
+        const newNotif = payload.new;
+        const role = localStorage.getItem('nextstop_role');
+        const myStop = localStorage.getItem('nextstop_boarding_stop');
+        
+        // Only show toast if it's a student and relevant to their boarding stop
+        if (role === 'student' && myStop) {
+          if (newNotif.title.includes('Bus Reached') && newNotif.title.includes(myStop)) {
+            showToast(newNotif.title, newNotif.message);
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(notifChannel);
+    };
   }, []);
+
+  const showToast = (title, message) => {
+    setToast({ title, message });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const handleAuthChange = (session) => {
     setSession(session);
@@ -83,7 +109,19 @@ function App() {
 
         if (role === 'driver') setCurrentView('driver-dashboard');
         else if (role === 'admin') setCurrentView('admin-dashboard');
-        else setCurrentView('student-dashboard');
+        else {
+          setCurrentView('student-dashboard');
+          // Fetch student boarding stop for notification filtering
+          supabase.from('profiles')
+            .select('boarding_stop')
+            .eq('id', session.user.id)
+            .single()
+            .then(({ data }) => {
+              if (data?.boarding_stop) {
+                localStorage.setItem('nextstop_boarding_stop', data.boarding_stop);
+              }
+            });
+        }
       } else {
         // Fallback for students without metadata
         setUserRole('student');
@@ -154,6 +192,20 @@ function App() {
         {renderView()}
       </main>
       {showBottomNav && <BottomNav activeView={currentView} onNavigate={navigateTo} />}
+      
+      {/* Global Toast Notification */}
+      {toast && (
+        <div className="global-toast animate-slide-up" onClick={() => setToast(null)}>
+          <div className="toast-icon">
+            <i className="ph-fill ph-bell-ringing"></i>
+          </div>
+          <div className="toast-content">
+            <div className="toast-title">{toast.title}</div>
+            <div className="toast-message">{toast.message}</div>
+          </div>
+          <div className="toast-progress"></div>
+        </div>
+      )}
     </div>
   );
 }

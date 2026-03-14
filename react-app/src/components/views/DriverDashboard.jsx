@@ -1,5 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getRouteByPath } from '../../lib/constants';
+
+// Helper for distance calculation (Haversine formula)
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
 const DriverDashboard = ({ onSignOut }) => {
     const [tripStarted, setTripStarted] = useState(false);
@@ -9,6 +23,8 @@ const DriverDashboard = ({ onSignOut }) => {
     const [lastPosition, setLastPosition] = useState(null);
     const [watchId, setWatchId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [lastNotifiedStop, setLastNotifiedStop] = useState(null);
+    const [notifStatus, setNotifStatus] = useState('');
     const startTimeoutRef = useRef(null);
     const channelRef = useRef(null);
 
@@ -141,6 +157,60 @@ const DriverDashboard = ({ onSignOut }) => {
                 event: 'location_update',
                 payload: { lat, lng, routeId: selectedRoute, gpsStatus: 'Live' }
             });
+            checkProximityToStops(lat, lng);
+        }
+    };
+
+    const checkProximityToStops = async (lat, lng) => {
+        const route = routes.find(r => r.id === selectedRoute);
+        if (!route) return;
+
+        const stops = getRouteByPath(route.name).filter(s => s.name);
+        
+        for (const stop of stops) {
+            const distance = getDistanceFromLatLonInKm(lat, lng, stop.lat, stop.lng);
+            
+            // If within 100 meters (0.1 km)
+            if (distance < 0.1) {
+                if (lastNotifiedStop !== stop.name) {
+                    setLastNotifiedStop(stop.name);
+                    sendStopNotification(stop.name, route);
+                }
+                return; // Only notify for one stop at a time
+            }
+        }
+    };
+
+    const sendStopNotification = async (stopName, route) => {
+        try {
+            const title = `🚌 Bus Reached: ${stopName}`;
+            const message = `The bus on the ${route.name} route has arrived at ${stopName}. Please be ready!`;
+            
+            setNotifStatus(`Notifying: ${stopName}...`);
+
+            await supabase.from('notifications').insert([{
+                title,
+                message,
+                target_audience: route.id
+            }]);
+
+            // Also broadcast it for immediate UI update in tracking view
+            if (channelRef.current) {
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'location_update',
+                    payload: { 
+                        automatedNotif: true, 
+                        title, 
+                        message,
+                        stopName
+                    }
+                });
+            }
+
+            setTimeout(() => setNotifStatus(''), 3000);
+        } catch (err) {
+            console.error("Auto-notif failed:", err);
         }
     };
 
@@ -161,6 +231,7 @@ const DriverDashboard = ({ onSignOut }) => {
                     event: 'location_update',
                     payload: { lat, lng, routeId: selectedRoute, gpsStatus: 'Simulated' }
                 });
+                checkProximityToStops(lat, lng);
             }
         };
 
@@ -223,6 +294,26 @@ const DriverDashboard = ({ onSignOut }) => {
                         <h4>Driver Portal</h4>
                         <p>{tripStarted ? `Trip Active: ${routes.find(r => r.id === selectedRoute)?.name}` : 'Select your assigned route for today'}</p>
                     </div>
+                    {notifStatus && (
+                        <div style={{
+                            position: 'absolute',
+                            left: '50%',
+                            bottom: '-12px',
+                            transform: 'translateX(-50%)',
+                            background: '#115e59',
+                            color: 'white',
+                            padding: '4px 12px',
+                            borderRadius: '100px',
+                            fontSize: '0.7rem',
+                            fontWeight: 900,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                            animation: 'scaleIn 0.3s ease-out'
+                        }}>
+                            <i className="ph-fill ph-bell-ringing" style={{ marginRight: '6px' }}></i>
+                            {notifStatus}
+                        </div>
+                    )}
                     {tripStarted && (
                         <div className="gps-indicator-v4" style={{
                             position: 'absolute',

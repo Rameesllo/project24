@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, supabaseAdmin } from '../../lib/supabase';
+import { getRouteByPath } from '../../lib/constants';
 
 const AdminDashboard = ({ onSignOut }) => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -10,6 +11,7 @@ const AdminDashboard = ({ onSignOut }) => {
     const [financeRecords, setFinanceRecords] = useState([]);
     const [paymentHistory, setPaymentHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [zoomedStudent, setZoomedStudent] = useState(null);
 
     const [modalState, setModalState] = useState({ type: null, data: null, active: false });
 
@@ -103,6 +105,38 @@ const AdminDashboard = ({ onSignOut }) => {
                         {modalState.type === 'payment' && <PaymentForm students={students} preSelectedStudentId={modalState.data} onSave={loadAdminData} onClose={closeModal} />}
                         {modalState.type === 'history' && <HistoryFlow studentId={modalState.data} history={paymentHistory.filter(p => p.student_id === modalState.data)} student={students.find(s => s.id === modalState.data)} onLogForStudent={(id) => openModal('payment', id)} onRefresh={loadAdminData} onClose={closeModal} />}
                     </div>
+                </div>
+            )}
+
+            {/* QR Zoom Overlay */}
+            {zoomedStudent && (
+                <div className="qr-zoom-overlay" onClick={() => setZoomedStudent(null)}>
+                    <div className="qr-zoom-card" onClick={e => e.stopPropagation()}>
+                        <div className="qr-zoom-header">
+                            <div className="qr-brand-badge">
+                                <i className="ph ph-qr-code"></i>
+                            </div>
+                            <div className="qr-zoom-info" style={{ textAlign: 'center' }}>
+                                <h3>{zoomedStudent.full_name}</h3>
+                                <p>Student ID: {zoomedStudent.admission_number}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="qr-zoom-scanner-container">
+                            <div className="qr-scanner-line"></div>
+                            <div className="qr-scanner-frame"></div>
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(zoomedStudent.admission_number)}`} 
+                                alt="Large QR" 
+                                className="qr-zoom-image"
+                            />
+                        </div>
+
+                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
+                            Scan to verify registration & board student
+                        </div>
+                    </div>
+                    <div className="qr-zoom-close" onClick={() => setZoomedStudent(null)}>Tap background to close</div>
                 </div>
             )}
 
@@ -225,13 +259,14 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
             </div>
         </div>
 
-        <div className="ledger-container">
+        <div className="ledger-container finance-optimized-scroll">
             <table className="ledger-table">
                 <thead className="ledger-header">
                     <tr>
-                        <th style={{ width: '50%' }}>Name & Admission</th>
+                        <th style={{ width: '40%' }}>Name & Admission</th>
                         <th style={{ width: '25%' }}>Route</th>
-                        <th style={{ width: '25%' }}>Actions</th>
+                        <th style={{ width: '15%' }}>QR Code</th>
+                        <th style={{ width: '20%' }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -241,7 +276,7 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
                                 <h4>{s.full_name}</h4>
                                 <p>{s.email} • {s.course} • {s.admission_number} • ({s.academic_year || '2023-26'})</p>
                                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-teal)', marginTop: '4px' }}>
-                                    Total Fee: ₹{s.fee_payments?.[0]?.total_due || 0}
+                                    Annual Fee: ₹{s.fee_payments?.[0]?.total_due || 0}
                                 </div>
                             </td>
                             <td>
@@ -249,6 +284,22 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
                                     {s.routes?.name || 'LOGISTICS TBD'}
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: '#666', fontWeight: 600 }}>({s.routes?.bus_number || 'N/A'})</div>
+                            </td>
+                            <td>
+                                <div style={{ width: '50px', height: '50px', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #eee' }}>
+                                    {s.admission_number ? (
+                                        <img 
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(s.admission_number)}`} 
+                                            alt="QR" 
+                                            style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
+                                            onClick={() => setZoomedStudent(s)}
+                                        />
+                                    ) : (
+                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+                                            <i className="ph ph-qr-code"></i>
+                                        </div>
+                                    )}
+                                </div>
                             </td>
                             <td>
                                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -353,9 +404,9 @@ const FinanceUI = ({ records, onRefresh, onLog, onHistory }) => (
                     <tr>
                         <th>Student</th>
                         <th>Year</th>
-                        <th>Total Due</th>
-                        <th>Paid</th>
-                        <th>Remaining</th>
+                        <th>Annual Fee</th>
+                        <th>Paid (Total)</th>
+                        <th>Dues (Total)</th>
                         <th>Stat</th>
                     </tr>
                 </thead>
@@ -407,8 +458,9 @@ const COURSES = [
 const StudentForm = ({ student, routes, onSave, onClose }) => {
     const [f, setF] = useState(student ? { 
         ...student, 
-        total_due: student.fee_payments?.[0]?.total_due || 2500 
-    } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', total_due: 2500, academic_year: '', avatar_url: '' });
+        total_due: student.fee_payments?.[0]?.total_due || 2500,
+        boarding_stop: student.boarding_stop || ''
+    } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', boarding_stop: '', total_due: 2500, academic_year: '', avatar_url: '' });
     const [sub, setSub] = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -440,6 +492,13 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
         }
     };
 
+    const availableStops = useMemo(() => {
+        if (!f.route_id) return [];
+        const route = routes.find(r => r.id === f.route_id);
+        if (!route) return [];
+        return getRouteByPath(route.name).filter(s => s.name);
+    }, [f.route_id, routes]);
+
     const save = async (e) => {
         e.preventDefault(); setSub(true);
         try {
@@ -449,6 +508,7 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                     admission_number: f.admission_number,
                     course: f.course || 'General',
                     route_id: f.route_id || null,
+                    boarding_stop: f.boarding_stop || null,
                     academic_year: f.academic_year,
                     avatar_url: f.avatar_url
                 };
@@ -465,6 +525,7 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                     admission_number: f.admission_number,
                     course: f.course || 'General',
                     route_id: f.route_id || null,
+                    boarding_stop: f.boarding_stop || null,
                     role: 'student',
                     academic_year: f.academic_year,
                     avatar_url: f.avatar_url
@@ -527,17 +588,60 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                 <input className="form-v3-input" placeholder="e.g. 2024-2025" required value={f.academic_year} onChange={e => setF({ ...f, academic_year: e.target.value })} />
 
                 <label className="form-v3-label">Assigned Route</label>
-                <select className="form-v3-input" value={f.route_id || ''} onChange={e => setF({ ...f, route_id: e.target.value })} style={{ appearance: 'none' }}>
+                <select className="form-v3-input" value={f.route_id || ''} onChange={e => setF({ ...f, route_id: e.target.value, boarding_stop: '' })} style={{ appearance: 'none' }}>
                     <option value="">-- Assign Transport Corridor --</option>
                     {routes.map(r => <option key={r.id} value={r.id}>{r.name} ({r.bus_number})</option>)}
                 </select>
 
-                <label className="form-v3-label">Total Fee Due (₹)</label>
-                <input className="form-v3-input" type="number" placeholder="e.g. 2500" required value={f.total_due} onChange={e => setF({ ...f, total_due: e.target.value })} />
+                {f.route_id && (
+                    <>
+                        <label className="form-v3-label">Default Boarding Stop</label>
+                        <select className="form-v3-input" value={f.boarding_stop || ''} onChange={e => setF({ ...f, boarding_stop: e.target.value })} style={{ appearance: 'none' }}>
+                            <option value="">-- Select Stop --</option>
+                            {availableStops.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                        </select>
+                    </>
+                )}
 
-                <button className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: 900, fontSize: '1rem' }} disabled={sub}>
-                    {sub ? 'PROCESSING...' : student ? 'UPDATE REGISTRATION' : 'REGISTER STUDENT'}
-                </button>
+                <label className="form-v3-label">Total Annual Fee (10 Months) (₹)</label>
+                <input className="form-v3-input" type="number" placeholder="e.g. 3500" required value={f.total_due} onChange={e => setF({ ...f, total_due: e.target.value })} />
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                    {student && (
+                        <button 
+                            type="button"
+                            className="btn btn-outline" 
+                            style={{ 
+                                flex: 1, 
+                                padding: '16px', 
+                                borderRadius: '16px', 
+                                fontWeight: 800, 
+                                borderColor: 'var(--color-error)', 
+                                color: 'var(--color-error)' 
+                            }} 
+                            onClick={async () => {
+                                if (confirm(`Erase ${f.full_name}'s record permanently?`)) {
+                                    setSub(true);
+                                    try {
+                                        await supabase.from('profiles').delete().eq('id', student.id);
+                                        onSave();
+                                        onClose();
+                                    } catch (err) {
+                                        alert("Delete failed: " + err.message);
+                                    } finally {
+                                        setSub(false);
+                                    }
+                                }
+                            }}
+                            disabled={sub}
+                        >
+                            DELETE STUDENT
+                        </button>
+                    )}
+                    <button className="btn btn-primary" style={{ flex: 2, padding: '16px', borderRadius: '16px', fontWeight: 900, fontSize: '1rem' }} disabled={sub}>
+                        {sub ? 'PROCESSING...' : student ? 'UPDATE REGISTRATION' : 'REGISTER STUDENT'}
+                    </button>
+                </div>
             </form>
         </div>
     );
