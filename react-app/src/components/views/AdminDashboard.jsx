@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, supabaseAdmin } from '../../lib/supabase';
-import { getRouteByPath } from '../../lib/constants';
+// import { getRouteByPath } from '../../lib/constants';
 
 const AdminDashboard = ({ onSignOut }) => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -81,7 +81,13 @@ const AdminDashboard = ({ onSignOut }) => {
                         {activeTab === 'overview' && <OverviewUI metrics={metrics} routes={routes} />}
                         {activeTab === 'students' && (
                             <div style={{ width: '100%', overflowX: 'auto' }}>
-                                <StudentsUI students={students} onAdd={() => openModal('student')} onEdit={s => openModal('student', s)} load={loadAdminData} />
+                                <StudentsUI 
+                                    students={students} 
+                                    onAdd={() => openModal('student')} 
+                                    onEdit={s => openModal('student', s)} 
+                                    load={loadAdminData} 
+                                    setZoomedStudent={setZoomedStudent} 
+                                />
                             </div>
                         )}
                         {activeTab === 'routes' && (
@@ -250,7 +256,7 @@ const OverviewUI = ({ metrics, routes }) => (
     </div>
 );
 
-const StudentsUI = ({ students, onAdd, onEdit, load }) => (
+const StudentsUI = ({ students, onAdd, onEdit, load, setZoomedStudent }) => (
     <div className="animate-fade-in">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h4 className="section-title-alt">Manage Students</h4>
@@ -263,10 +269,9 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
             <table className="ledger-table">
                 <thead className="ledger-header">
                     <tr>
-                        <th style={{ width: '40%' }}>Name & Admission</th>
-                        <th style={{ width: '25%' }}>Route</th>
-                        <th style={{ width: '15%' }}>QR Code</th>
-                        <th style={{ width: '20%' }}>Actions</th>
+                        <th style={{ width: '50%' }}>Name & Admission</th>
+                        <th style={{ width: '20%' }}>QR Code</th>
+                        <th style={{ width: '30%' }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -278,12 +283,6 @@ const StudentsUI = ({ students, onAdd, onEdit, load }) => (
                                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-teal)', marginTop: '4px' }}>
                                     Annual Fee: ₹{s.fee_payments?.[0]?.total_due || 0}
                                 </div>
-                            </td>
-                            <td>
-                                <div className="route-cell-meta">
-                                    {s.routes?.name || 'LOGISTICS TBD'}
-                                </div>
-                                <div style={{ fontSize: '0.8rem', color: '#666', fontWeight: 600 }}>({s.routes?.bus_number || 'N/A'})</div>
                             </td>
                             <td>
                                 <div style={{ width: '50px', height: '50px', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #eee' }}>
@@ -458,9 +457,8 @@ const COURSES = [
 const StudentForm = ({ student, routes, onSave, onClose }) => {
     const [f, setF] = useState(student ? { 
         ...student, 
-        total_due: student.fee_payments?.[0]?.total_due || 2500,
-        boarding_stop: student.boarding_stop || ''
-    } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', boarding_stop: '', total_due: 2500, academic_year: '', avatar_url: '' });
+        total_due: student.fee_payments?.[0]?.total_due || 2500
+    } : { full_name: '', admission_number: '', course: '', email: '', password: '', route_id: '', total_due: 2500, academic_year: '', avatar_url: '' });
     const [sub, setSub] = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -492,12 +490,6 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
         }
     };
 
-    const availableStops = useMemo(() => {
-        if (!f.route_id) return [];
-        const route = routes.find(r => r.id === f.route_id);
-        if (!route) return [];
-        return getRouteByPath(route.name).filter(s => s.name);
-    }, [f.route_id, routes]);
 
     const save = async (e) => {
         e.preventDefault(); setSub(true);
@@ -508,7 +500,6 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                     admission_number: f.admission_number,
                     course: f.course || 'General',
                     route_id: f.route_id || null,
-                    boarding_stop: f.boarding_stop || null,
                     academic_year: f.academic_year,
                     avatar_url: f.avatar_url
                 };
@@ -516,8 +507,21 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                 // Also update fee_payments table
                 await supabase.from('fee_payments').update({ total_due: Number(f.total_due) }).eq('student_id', student.id);
             } else {
-                const { data: auth, error: authErr } = await supabaseAdmin.auth.admin.createUser({ email: f.email, password: f.password, user_metadata: { role: 'student' }, email_confirm: true });
-                if (authErr) throw authErr;
+                console.log("Attempting to create user with email:", f.email);
+                const { data: auth, error: authErr } = await supabaseAdmin.auth.admin.createUser({ 
+                    email: f.email, 
+                    password: f.password, 
+                    user_metadata: { role: 'student' }, 
+                    email_confirm: true 
+                });
+                
+                if (authErr) {
+                    console.error("Supabase Auth Admin Error:", authErr);
+                    throw new Error(`Registration Failed: ${authErr.message} (Status: ${authErr.status})`);
+                }
+                console.log("User successfully created in Auth:", auth.user.id);
+
+                console.log("Attempting to create profile record...");
                 const { error: profErr } = await supabase.from('profiles').insert({
                     id: auth.user.id,
                     full_name: f.full_name,
@@ -525,16 +529,37 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                     admission_number: f.admission_number,
                     course: f.course || 'General',
                     route_id: f.route_id || null,
-                    boarding_stop: f.boarding_stop || null,
                     role: 'student',
                     academic_year: f.academic_year,
                     avatar_url: f.avatar_url
                 });
-                if (profErr) throw profErr;
-                await supabase.from('fee_payments').insert({ student_id: auth.user.id, total_due: f.total_due || 2500, amount_paid: 0 });
+                
+                if (profErr) {
+                    console.error("Profile Insertion Error:", profErr);
+                    throw new Error(`Profile creation failed: ${profErr.message}`);
+                }
+                console.log("Profile successfully created.");
+
+                console.log("Attempting to create fee_payments record...");
+                const { error: feeErr } = await supabase.from('fee_payments').insert({ 
+                    student_id: auth.user.id, 
+                    total_due: Number(f.total_due) || 2500, 
+                    amount_paid: 0,
+                    academic_year: f.academic_year
+                });
+                
+                if (feeErr) {
+                    console.error("Fee Payment Insertion Error:", feeErr);
+                    throw new Error(`Fee record creation failed: ${feeErr.message}`);
+                }
+                console.log("Fee record successfully created.");
             }
+            alert('Student Registered Successfully');
             onSave(); onClose();
-        } catch (err) { alert(err.message); } finally { setSub(false); }
+        } catch (err) { 
+            console.error("Registration Workflow Catch:", err);
+            alert(err.message); 
+        } finally { setSub(false); }
     };
 
     return (
@@ -588,20 +613,11 @@ const StudentForm = ({ student, routes, onSave, onClose }) => {
                 <input className="form-v3-input" placeholder="e.g. 2024-2025" required value={f.academic_year} onChange={e => setF({ ...f, academic_year: e.target.value })} />
 
                 <label className="form-v3-label">Assigned Route</label>
-                <select className="form-v3-input" value={f.route_id || ''} onChange={e => setF({ ...f, route_id: e.target.value, boarding_stop: '' })} style={{ appearance: 'none' }}>
+                <select className="form-v3-input" value={f.route_id || ''} onChange={e => setF({ ...f, route_id: e.target.value })} style={{ appearance: 'none' }}>
                     <option value="">-- Assign Transport Corridor --</option>
                     {routes.map(r => <option key={r.id} value={r.id}>{r.name} ({r.bus_number})</option>)}
                 </select>
 
-                {f.route_id && (
-                    <>
-                        <label className="form-v3-label">Default Boarding Stop</label>
-                        <select className="form-v3-input" value={f.boarding_stop || ''} onChange={e => setF({ ...f, boarding_stop: e.target.value })} style={{ appearance: 'none' }}>
-                            <option value="">-- Select Stop --</option>
-                            {availableStops.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-                        </select>
-                    </>
-                )}
 
                 <label className="form-v3-label">Total Annual Fee (10 Months) (₹)</label>
                 <input className="form-v3-input" type="number" placeholder="e.g. 3500" required value={f.total_due} onChange={e => setF({ ...f, total_due: e.target.value })} />
